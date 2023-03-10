@@ -1,25 +1,19 @@
 import { useState } from 'react'
 import {useEffect} from 'react'
-import axios from 'axios'
 import Persons from './Persons'
 import PersonForm from './Personform'
-
+import Service from './Service'
+import Message from './Message'
 
 const App = () => {
   const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
+  const [newMessage, setNewMessage] = useState(null)
 
   useEffect(() => {
-    console.log('effect')
-  
-    const eventHandler = response => {
-      console.log('promise fulfilled')
-      setPersons(response.data)
-    }
-  
-    const promise = axios.get('http://localhost:3001/persons')
-    promise.then(eventHandler)
+    Service.getAll()
+    .then(data => {setPersons(data)})
   }, [])
 
   const handleName = (event) => {
@@ -44,20 +38,38 @@ const App = () => {
       window.alert(`${newNumber} is already in the list`)
     }
     else{
-    const newPerson = { name: newName, number: newNumber }
-    setPersons(persons.concat(newPerson))
-    axios.post('http://localhost:3001/notes', newPerson)
-    .then(response => {setPersons(persons.concat(response.data))})
+    const newPerson = { name: newName, number: newNumber, id: persons.size + 2}
+    Service.create(newPerson).then(data => {setPersons(persons.concat(data))} )
+    setNewMessage(`${newName} was added.`)
     setNewName('')
     setNewNumber('')
+    setTimeout(() => {
+      setNewMessage(null)
+    }, 5000)
     }
   }
+  const deletePerson = (id) => {
+    const filteredPersons = persons.filter(person => person.id === id)
+    const personName = filteredPersons[0].name
+    const personId = filteredPersons[0].id
+    if (window.confirm(`Delete ${personName} ?`)) {
+      Service.remove(personId)
+      setNewMessage(`${personName} was deleted`)
+      setPersons(persons.filter(person => person.id !== personId))
+      setTimeout(() => {
+        setNewMessage(null)
+      }, 5000)
+    }
+  }
+
   return (
     <div>
       <h2>Phonebook</h2>
+      <Message message={newMessage} />
+      <h2>Add new person</h2>
       <PersonForm addName={addName} newName={newName} newNumber={newNumber} handleName={handleName} handleNumber={handleNumber}/>
       <h2>Numbers</h2>
-      <Persons persons={persons}/>
+      <Persons persons={persons} deletePerson={deletePerson}/>
     </div>
   )
 
